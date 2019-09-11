@@ -13,12 +13,18 @@ class LampControlUI(Frame):
 
         self.broker_IP = "192.168.1.11"
         self.alarm = BooleanVar(value = False)
+        self.maxTemp = DoubleVar()
 
         # Agregando frames principales
         self.alarmLabel = Label(self,text = "Temperatura normal")
         self.alarmLabel.pack()
         self.ledLabel = Label(self,text = "T: ??")
         self.ledLabel.pack()
+        self.alarmLimit = Scale(self, label='Temperatura Max.', 
+                                command=self.changeMaxTemp,
+                                from_=0 , to=500,
+                                orient='horizontal')
+        self.alarmLimit.pack(expand=YES,fill=X)
 
         # cliente mqtt
         self.client = mqtt.Client()
@@ -30,6 +36,10 @@ class LampControlUI(Frame):
         # Iniciando el loop infinito del cliente mqtt
         self.client.loop_start() 
          
+    def changeMaxTemp(self,value):
+        self.maxTemp.set(float(value))
+        
+    
     def on_connect(self, client, userdata, flags, rc):
         print("Connected with result code "+ str(rc))
         self.client.subscribe("casa/despacho/temperatura")    # self.client.subscribe("casa/#")
@@ -39,7 +49,7 @@ class LampControlUI(Frame):
         temp = float(msg.payload)
         print('%s %s' % (msg.topic, msg.payload))
         self.ledLabel.config(text = "T: " + str(temp))
-        if float(temp) > 260:
+        if float(temp) > self.maxTemp.get():
           if self.alarm.get() == False: 
             print("ALERTA")
             publish.single("casa/despacho/luz", "1", hostname=self.broker_IP)      
