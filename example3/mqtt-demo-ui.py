@@ -12,11 +12,12 @@ class LampControlUI(Frame):
 
 
         self.broker_IP = "192.168.1.11"
+        self.alarm = BooleanVar(value = False)
 
         # Agregando frames principales
         self.alarmLabel = Label(self,text = "Temperatura normal")
         self.alarmLabel.pack()
-        self.ledLabel = Label(self,text = "T: ")
+        self.ledLabel = Label(self,text = "T: ??")
         self.ledLabel.pack()
 
         # cliente mqtt
@@ -31,14 +32,22 @@ class LampControlUI(Frame):
          
     def on_connect(self, client, userdata, flags, rc):
         print("Connected with result code "+ str(rc))
-        self.client.subscribe("casa/#")
+        self.client.subscribe("casa/despacho/temperatura")    # self.client.subscribe("casa/#")
 
     def on_message(self, client, userdata, msg):
-        print("We got a message")
+        # print("We got a message")
+        temp = float(msg.payload)
         print('%s %s' % (msg.topic, msg.payload))
-        if float(msg.payload) > 260:
-          print("ALERTA")
-          publish.single("casa/despacho/luz", "1", hostname=self.broker_IP)
+        self.ledLabel.config(text = "T: " + str(temp))
+        if float(temp) > 260:
+          if self.alarm.get() == False: 
+            print("ALERTA")
+            publish.single("casa/despacho/luz", "1", hostname=self.broker_IP)      
+            self.alarm.set(True) # Alarma enviada --> Prendiento el led 
+        else:
+            if self.alarm.get() == True:
+              publish.single("casa/despacho/luz", "0", hostname=self.broker_IP)  
+              self.alarm.set(False) # Alarma apagaga --> Apagando el led
 
 # Allow the class to run stand-alone.
 if __name__ == "__main__":
